@@ -1,0 +1,167 @@
+
+const express = require("express");
+const Product = require("../models/product");
+
+const router = express.Router();
+
+router.post("/", async (req, res) => {
+  try {
+    const {
+      brand,
+      name,
+      shortDescription,
+      imageUrl,
+      whatsInside,
+      ingredients,
+      brandOrigin,
+      price,
+      currency,
+      inStock,
+      stockCount,
+      size,
+      discountPercent,
+      recommendedFor,
+      isPublished,
+    } = req.body;
+
+    if (!name || !brand) {
+      return res.status(400).json({
+        message: "name and brand are required",
+      });
+    }
+
+    const newProduct = new Product({
+      brand,
+      name,
+      shortDescription,
+      imageUrl,
+      rating: 0,
+      reviews: [],
+      whatsInside: whatsInside || {},
+      ingredients: ingredients || [],
+      brandOrigin: brandOrigin || "",
+      price: price ?? 0,
+      currency: currency || "USD",
+      inStock: inStock ?? true,
+      stockCount: stockCount ?? 0,
+      size: size || "",
+      discountPercent: discountPercent ?? 0,
+      recommendedFor: recommendedFor || {
+        skinTypes: [],
+        concerns: [],
+        goals: [],
+      },
+      isPublished: isPublished ?? true,
+    });
+
+    await newProduct.save();
+
+    res.status(201).json({
+      message: "Product added successfully",
+      product: newProduct,
+    });
+  } catch (error) {
+    console.log("❌ ADD PRODUCT ERROR:", error);
+    res.status(500).json({
+      message: "Server error",
+      error: error.message,
+    });
+  }
+});
+
+router.get("/", async (req, res) => {
+  try {
+    const products = await Product.find().sort({ createdAt: -1 });
+    res.status(200).json(products);
+  } catch (error) {
+    console.log("❌ GET PRODUCTS ERROR:", error);
+    res.status(500).json({
+      message: "Server error",
+      error: error.message,
+    });
+  }
+});
+
+router.get("/count", async (req, res) => {
+  try {
+    const count = await Product.countDocuments();
+    res.status(200).json({ count });
+  } catch (error) {
+    console.log("❌ GET PRODUCTS COUNT ERROR:", error);
+    res.status(500).json({
+      message: "Failed to get products count",
+      error: error.message,
+    });
+  }
+});
+
+router.get("/:id", async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    res.status(200).json(product);
+  } catch (error) {
+    console.log("❌ GET PRODUCT ERROR:", error);
+    res.status(500).json({
+      message: "Server error",
+      error: error.message,
+    });
+  }
+});
+
+router.post("/:id/reviews", async (req, res) => {
+  try {
+    const { userId, userName, rating, comment } = req.body;
+
+    if (!userId || !rating) {
+      return res.status(400).json({
+        message: "userId and rating are required",
+      });
+    }
+
+    const product = await Product.findById(req.params.id);
+
+    if (!product) {
+      return res.status(404).json({
+        message: "Product not found",
+      });
+    }
+
+    const newReview = {
+      userId,
+      userName: userName || "Anonymous",
+      rating: Number(rating),
+      comment: comment || "",
+      createdAt: new Date(),
+    };
+
+    product.reviews.unshift(newReview);
+
+    const totalRating = product.reviews.reduce((sum, review) => {
+      return sum + review.rating;
+    }, 0);
+
+    product.rating = totalRating / product.reviews.length;
+
+    await product.save();
+
+    res.status(201).json({
+      message: "Review added successfully",
+      review: newReview,
+      rating: product.rating,
+      reviews: product.reviews,
+    });
+  } catch (error) {
+    console.log("❌ ADD REVIEW ERROR:", error);
+    res.status(500).json({
+      message: "Server error",
+      error: error.message,
+    });
+  }
+});
+
+module.exports = router;
