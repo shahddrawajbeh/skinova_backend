@@ -24,14 +24,16 @@ const favoriteRoutes = require("./routes/favorites");
 const cartRoutes = require("./routes/cart");
 const orderRoutes = require("./routes/orders");
 const groupRoutes = require("./routes/group");
+const groupPostsRoutes = require("./routes/group_posts");
+
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productsRoutes);
 app.use("/api/favorites", favoriteRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/groups", groupRoutes);
-
-
+app.use("/api/group-posts", groupPostsRoutes);
+app.use("/uploads", express.static("uploads"));
 
 app.listen(5000, "0.0.0.0", () => {
   console.log("Server running on port 5000");

@@ -1,5 +1,31 @@
+
+const mongoose = require("mongoose");
+const groupMembershipSchema = new mongoose.Schema(
+  {
+    groupId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Group",
+      required: true,
+    },
+    userId: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+  },
+  { timestamps: true }
+);
+
+groupMembershipSchema.index({ groupId: 1, userId: 1 }, { unique: true });
+
+const GroupMembership = mongoose.model("GroupMembership", groupMembershipSchema);
+
+
+
+
 const express = require("express");
 const Group = require("../models/group");
+const Product = require("../models/product");
 
 const router = express.Router();
 
@@ -12,6 +38,7 @@ router.post("/", async (req, res) => {
       coverImage,
       profileImage,
       description,
+       groupType,
       categoryKey,
       membersCount,
     } = req.body;
@@ -29,6 +56,7 @@ router.post("/", async (req, res) => {
       description: description || "",
       categoryKey: categoryKey ? categoryKey.trim().toLowerCase() : "",
       membersCount: membersCount || 0,
+       groupType: groupType || "product_categories",
     });
 
     await newGroup.save();
@@ -57,6 +85,21 @@ router.get("/", async (req, res) => {
     });
   }
 });
+router.get("/type/:groupType", async (req, res) => {
+  try {
+    const groups = await Group.find({
+      groupType: req.params.groupType,
+      isActive: true,
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json(groups);
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to fetch groups by type",
+      error: error.message,
+    });
+  }
+});
 
 // Get single group by slug
 router.get("/:slug", async (req, res) => {
@@ -73,6 +116,151 @@ router.get("/:slug", async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Failed to fetch group",
+      error: error.message,
+    });
+  }
+});
+router.get("/:slug/products", async (req, res) => {
+  try {
+    const slug = req.params.slug.trim().toLowerCase();
+
+    const group = await Group.findOne({ slug, isActive: true });
+
+    if (!group) {
+      return res.status(404).json({ message: "Group not found" });
+    }
+
+    const products = await Product.find({
+      isPublished: true,
+      category: group.categoryKey,
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json(products);
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to fetch group products",
+      error: error.message,
+    });
+  }
+});
+router.post("/:slug/join", async (req, res) => {
+  try {
+    const slug = req.params.slug.trim().toLowerCase();
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ message: "userId is required" });
+    }
+
+    const group = await Group.findOne({ slug, isActive: true });
+
+    if (!group) {
+      return res.status(404).json({ message: "Group not found" });
+    }
+
+    const existingMembership = await GroupMembership.findOne({
+      groupId: group._id,
+      userId,
+    });
+
+    if (existingMembership) {
+      return res.status(200).json({
+        message: "Already joined",
+        isJoined: true,
+      });
+    }
+
+    await GroupMembership.create({
+      groupId: group._id,
+      userId,
+    });
+
+    group.membersCount += 1;
+    await group.save();
+
+    res.status(200).json({
+      message: "Joined successfully",
+      isJoined: true,
+      membersCount: group.membersCount,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to join group",
+      error: error.message,
+    });
+  }
+});
+router.get("/:slug/join-status/:userId", async (req, res) => {
+  try {
+    const slug = req.params.slug.trim().toLowerCase();
+    const userId = req.params.userId;
+
+    const group = await Group.findOne({ slug, isActive: true });
+
+    if (!group) {
+      return res.status(404).json({ message: "Group not found" });
+    }
+
+    const membership = await GroupMembership.findOne({
+      groupId: group._id,
+      userId,
+    });
+
+    res.status(200).json({
+      isJoined: !!membership,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to check join status",
+      error: error.message,
+    });
+  }
+});
+router.post("/:slug/leave", async (req, res) => {
+  try {
+    const slug = req.params.slug.trim().toLowerCase();
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ message: "userId is required" });
+    }
+
+    const group = await Group.findOne({ slug, isActive: true });
+
+    if (!group) {
+      return res.status(404).json({ message: "Group not found" });
+    }
+
+    const membership = await GroupMembership.findOne({
+      groupId: group._id,
+      userId,
+    });
+
+    if (!membership) {
+      return res.status(200).json({
+        message: "User is not a member of this group",
+        isJoined: false,
+      });
+    }
+
+    await GroupMembership.deleteOne({
+      groupId: group._id,
+      userId,
+    });
+
+    if (group.membersCount > 0) {
+      group.membersCount -= 1;
+      await group.save();
+    }
+
+    res.status(200).json({
+      message: "Left group successfully",
+      isJoined: false,
+      membersCount: group.membersCount,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to leave group",
       error: error.message,
     });
   }

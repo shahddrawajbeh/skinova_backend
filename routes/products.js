@@ -10,6 +10,8 @@ router.post("/", async (req, res) => {
       brand,
       name,
       shortDescription,
+        category,
+
       imageUrl,
       whatsInside,
       ingredients,
@@ -33,6 +35,7 @@ router.post("/", async (req, res) => {
     const newProduct = new Product({
       brand,
       name,
+      category: category ? category.trim().toLowerCase() : "",
       shortDescription,
       imageUrl,
       rating: 0,
@@ -50,6 +53,7 @@ router.post("/", async (req, res) => {
         skinTypes: [],
         concerns: [],
         goals: [],
+
       },
       isPublished: isPublished ?? true,
     });
@@ -112,14 +116,25 @@ router.get("/:id", async (req, res) => {
     });
   }
 });
-
 router.post("/:id/reviews", async (req, res) => {
   try {
-    const { userId, userName, rating, comment } = req.body;
+    const {
+      userId,
+      userName,
+      rating,
+      title,
+      comment,
+      repurchase,
+      improvedSkin,
+      wasGift,
+      adverseReaction,
+      texture,
+      usageWeeks,
+    } = req.body;
 
-    if (!userId || !rating) {
+    if (!userId || !userName || !rating) {
       return res.status(400).json({
-        message: "userId and rating are required",
+        message: "userId, userName, and rating are required",
       });
     }
 
@@ -133,16 +148,23 @@ router.post("/:id/reviews", async (req, res) => {
 
     const newReview = {
       userId,
-      userName: userName || "Anonymous",
+      userName,
       rating: Number(rating),
+      title: title || "",
       comment: comment || "",
+      repurchase: repurchase ?? null,
+      improvedSkin: improvedSkin ?? null,
+      wasGift: wasGift ?? null,
+      adverseReaction: adverseReaction ?? null,
+      texture: texture || "",
+      usageWeeks: usageWeeks || "",
       createdAt: new Date(),
     };
 
     product.reviews.unshift(newReview);
 
     const totalRating = product.reviews.reduce((sum, review) => {
-      return sum + review.rating;
+      return sum + Number(review.rating || 0);
     }, 0);
 
     product.rating = totalRating / product.reviews.length;

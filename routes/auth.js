@@ -3,6 +3,7 @@ const bcrypt = require("bcryptjs");
 const User = require("../models/user");
 const multer = require("multer");
 const path = require("path");
+const GroupPost = require("../models/group_posts");
 
 const router = express.Router();
 
@@ -415,6 +416,78 @@ router.get("/users", async (req, res) => {
     console.log("❌ GET ALL USERS ERROR:", error);
     res.status(500).json({
       message: "Failed to fetch users",
+      error: error.message,
+    });
+  }
+});
+router.post("/user/:userId/save-post/:postId", async (req, res) => {
+  try {
+    const { userId, postId } = req.params;
+
+    const user = await User.findById(userId);
+    const post = await GroupPost.findById(postId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    const alreadySaved = user.savedPosts.some(
+      (id) => id.toString() === postId
+    );
+
+    if (alreadySaved) {
+      user.savedPosts = user.savedPosts.filter(
+        (id) => id.toString() !== postId
+      );
+
+      await user.save();
+
+      return res.status(200).json({
+        message: "Post removed from saved",
+        isSaved: false,
+        savedPosts: user.savedPosts,
+      });
+    }
+
+    user.savedPosts.push(post._id);
+    await user.save();
+
+    res.status(200).json({
+      message: "Post saved successfully",
+      isSaved: true,
+      savedPosts: user.savedPosts,
+    });
+  } catch (error) {
+    console.log("❌ SAVE POST ERROR:", error);
+    res.status(500).json({
+      message: "Server error",
+      error: error.message,
+    });
+  }
+});
+router.get("/user/:userId/saved-posts", async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await User.findById(userId).populate({
+      path: "savedPosts",
+      model: "GroupPost",
+      options: { sort: { createdAt: -1 } },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json(user.savedPosts);
+  } catch (error) {
+    console.log("❌ GET SAVED POSTS ERROR:", error);
+    res.status(500).json({
+      message: "Server error",
       error: error.message,
     });
   }

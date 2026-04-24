@@ -49,6 +49,12 @@ const userSchema = new mongoose.Schema(
     ref: "Product",
   },
 ],
+savedPosts: [
+  {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "GroupPost",
+  },
+],
 
     onboarding: {
       gender: String,

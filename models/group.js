@@ -33,6 +33,11 @@ const groupSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
+     groupType: {
+      type: String,
+      enum: ["skin_types", "skin_colors", "product_categories"],
+      default: "product_categories",
+    },
     membersCount: {
       type: Number,
       default: 0,
@@ -41,6 +46,7 @@ const groupSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    
   },
   { timestamps: true }
 );

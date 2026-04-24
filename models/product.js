@@ -10,16 +10,16 @@ const ingredientSchema = new mongoose.Schema(
   { _id: false }
 );
 
-const reviewSchema = new mongoose.Schema(
-  {
-    userId: { type: String, trim: true },
-    userName: { type: String, trim: true },
-    rating: { type: Number, min: 0, max: 5, default: 0 },
-    comment: { type: String, trim: true, default: "" },
-    createdAt: { type: Date, default: Date.now },
-  },
-  { _id: false }
-);
+// const reviewSchema = new mongoose.Schema(
+//   {
+//     userId: { type: String, trim: true },
+//     userName: { type: String, trim: true },
+//     rating: { type: Number, min: 0, max: 5, default: 0 },
+//     comment: { type: String, trim: true, default: "" },
+//     createdAt: { type: Date, default: Date.now },
+//   },
+//   { _id: false }
+// );
 
 const productSchema = new mongoose.Schema(
   {
@@ -34,6 +34,12 @@ const productSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    category: {
+  type: String,
+  trim: true,
+  default: "",
+  lowercase: true,
+},
 
     shortDescription: {
       type: String,
@@ -51,11 +57,60 @@ const productSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-
-    reviews: {
-      type: [reviewSchema],
-      default: [],
+reviews: [
+  {
+    userId: {
+      type: String,
+      required: true,
     },
+    userName: {
+      type: String,
+      required: true,
+    },
+    rating: {
+      type: Number,
+      required: true,
+      min: 1,
+      max: 5,
+    },
+    title: {
+      type: String,
+      default: "",
+    },
+    comment: {
+      type: String,
+      default: "",
+    },
+    repurchase: {
+      type: Boolean,
+      default: null,
+    },
+    improvedSkin: {
+      type: Boolean,
+      default: null,
+    },
+    wasGift: {
+      type: Boolean,
+      default: null,
+    },
+    adverseReaction: {
+      type: Boolean,
+      default: null,
+    },
+    texture: {
+      type: String,
+      default: "",
+    },
+    usageWeeks: {
+      type: String,
+      default: "",
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+],
 
     whatsInside: {
       alcoholFree: { type: Boolean, default: false },
