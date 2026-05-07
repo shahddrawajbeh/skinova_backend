@@ -1,5 +1,7 @@
 const express = require("express");
 const GroupPost = require("../models/group_posts");
+const Group = require("../models/group");
+const Product = require("../models/product");
 const multer = require("multer");
 const path = require("path");
 const storage = multer.diskStorage({
@@ -121,7 +123,109 @@ router.post("/question", async (req, res) => {
     });
   }
 });
+router.get("/product-category-discussion/:groupSlug", async (req, res) => {
+  try {
+    const groupSlug = req.params.groupSlug.trim().toLowerCase();
 
+    const posts = await GroupPost.find({
+      groupSlug: groupSlug,
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json(posts);
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to fetch product category discussion posts",
+      error: error.message,
+    });
+  }
+});
+router.get("/group/:groupSlug", async (req, res) => {
+  try {
+    const groupSlug = req.params.groupSlug.trim().toLowerCase();
+
+    const group = await Group.findOne({ slug: groupSlug, isActive: true });
+
+    if (!group) {
+      return res.status(404).json({ message: "Group not found" });
+    }
+
+    const key = (group.categoryKey || group.title || group.slug)
+      .toLowerCase()
+      .trim();
+
+    let productFilter = {};
+
+    if (group.groupType === "skin_type" || group.groupType === "skin_types") {
+      productFilter = {
+        "recommendedFor.skinTypes": { $regex: key, $options: "i" },
+      };
+    } else if (group.groupType === "skin_concerns") {
+      productFilter = {
+        "recommendedFor.concerns": { $regex: key, $options: "i" },
+      };
+    } else if (group.groupType === "skin_tones") {
+      productFilter = {
+        "recommendedFor.skinTones": { $regex: key, $options: "i" },
+      };
+    }
+
+    const relatedProducts = await Product.find(productFilter).select("_id name");
+
+    const relatedProductIds = relatedProducts.map((p) => p._id);
+    const relatedProductNames = relatedProducts.map((p) => p.name);
+
+    const posts = await GroupPost.find({
+      $or: [
+        { groupSlug: group.slug },
+
+        { productId: { $in: relatedProductIds } },
+        { productName: { $in: relatedProductNames } },
+
+        { content: { $regex: key, $options: "i" } },
+        { productName: { $regex: key, $options: "i" } },
+        { tag: { $regex: key, $options: "i" } },
+      ],
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json(posts);
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to fetch related group posts",
+      error: error.message,
+    });
+  }
+});
+router.get("/product-review-posts/:productId", async (req, res) => {
+  try {
+    const posts = await GroupPost.find({
+      productId: req.params.productId,
+      postType: "review",
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json(posts);
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to fetch product review posts",
+      error: error.message,
+    });
+  }
+});
+router.get("/medication-discussion/:groupSlug", async (req, res) => {
+  try {
+    const groupSlug = req.params.groupSlug.trim().toLowerCase();
+
+    const posts = await GroupPost.find({
+      groupSlug: groupSlug,
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json(posts);
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to fetch medication discussion posts",
+      error: error.message,
+    });
+  }
+});
 router.get("/", async (req, res) => {
   try {
     const posts = await GroupPost.find().sort({ createdAt: -1 });

@@ -156,8 +156,11 @@ router.get("/user/:userId", async (req, res) => {
     const { userId } = req.params;
 
     const user = await User.findById(userId)
-      .select("-password")
-      .populate("favorites", "name brand imageUrl category rating");
+       .select("-password")
+  .populate("favorites", "name brand imageUrl category rating")
+  .populate("followers", "fullName profileImage")
+  .populate("following", "fullName profileImage");
+
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -490,6 +493,77 @@ router.get("/user/:userId/saved-posts", async (req, res) => {
       message: "Server error",
       error: error.message,
     });
+  }
+});
+router.put("/collection/:collectionId/add-product", async (req, res) => {
+  try {
+    const { collectionId } = req.params;
+    const { imageUrl } = req.body;
+
+    const user = await User.findOne({ "collections._id": collectionId });
+
+    if (!user) {
+      return res.status(404).json({ message: "Collection not found" });
+    }
+
+    const collection = user.collections.id(collectionId);
+
+    if (!collection.images.includes(imageUrl)) {
+      collection.images.push(imageUrl);
+    }
+
+    await user.save();
+
+    res.status(200).json({
+      message: "Product added to collection",
+      collection,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Server error",
+      error: error.message,
+    });
+  }
+});
+router.post("/:id/follow", async (req, res) => {
+  try {
+    const targetUserId = req.params.id;
+    const { currentUserId } = req.body;
+
+    if (targetUserId === currentUserId) {
+      return res.status(400).json({ message: "You cannot follow yourself" });
+    }
+
+    await User.findByIdAndUpdate(targetUserId, {
+      $addToSet: { followers: currentUserId },
+    });
+
+    await User.findByIdAndUpdate(currentUserId, {
+      $addToSet: { following: targetUserId },
+    });
+
+    res.json({ message: "Followed successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Follow failed", error: error.message });
+  }
+});
+
+router.post("/:id/unfollow", async (req, res) => {
+  try {
+    const targetUserId = req.params.id;
+    const { currentUserId } = req.body;
+
+    await User.findByIdAndUpdate(targetUserId, {
+      $pull: { followers: currentUserId },
+    });
+
+    await User.findByIdAndUpdate(currentUserId, {
+      $pull: { following: targetUserId },
+    });
+
+    res.json({ message: "Unfollowed successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Unfollow failed", error: error.message });
   }
 });
 module.exports = router;

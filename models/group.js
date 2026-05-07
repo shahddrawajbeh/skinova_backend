@@ -35,7 +35,7 @@ const groupSchema = new mongoose.Schema(
     },
      groupType: {
       type: String,
-      enum: ["skin_types", "skin_colors", "product_categories"],
+      enum: ["skin_types", "skin_colors", "product_categories","skin_concerns","skin_tones","skin_type","medications"],
       default: "product_categories",
     },
     membersCount: {

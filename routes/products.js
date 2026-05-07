@@ -10,7 +10,8 @@ router.post("/", async (req, res) => {
       brand,
       name,
       shortDescription,
-        category,
+      category,
+      directionsOfUse,
 
       imageUrl,
       whatsInside,
@@ -37,6 +38,7 @@ router.post("/", async (req, res) => {
       name,
       category: category ? category.trim().toLowerCase() : "",
       shortDescription,
+      directionsOfUse: directionsOfUse || "",
       imageUrl,
       rating: 0,
       reviews: [],
@@ -98,7 +100,25 @@ router.get("/count", async (req, res) => {
     });
   }
 });
+router.get("/brand/:brand", async (req, res) => {
+  try {
+    const brand = req.params.brand.trim();
 
+    const products = await Product.find({
+      brand: { $regex: `^${brand}$`, $options: "i" },
+      isPublished: true,
+    })
+      .sort({ createdAt: -1 })
+      .limit(10);
+
+    res.status(200).json(products);
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to get products by brand",
+      error: error.message,
+    });
+  }
+});
 router.get("/:id", async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
@@ -183,6 +203,22 @@ router.post("/:id/reviews", async (req, res) => {
       message: "Server error",
       error: error.message,
     });
+  }
+});
+router.get("/concern/:concern", async (req, res) => {
+  try {
+    const concern = req.params.concern;
+
+    const products = await Product.find({
+      isPublished: true,
+     "recommendedFor.concerns": {
+  $regex: new RegExp(`^${concern}$`, "i"),
+}
+    });
+
+    res.json(products);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 

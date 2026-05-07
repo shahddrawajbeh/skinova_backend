@@ -10,16 +10,7 @@ const ingredientSchema = new mongoose.Schema(
   { _id: false }
 );
 
-// const reviewSchema = new mongoose.Schema(
-//   {
-//     userId: { type: String, trim: true },
-//     userName: { type: String, trim: true },
-//     rating: { type: Number, min: 0, max: 5, default: 0 },
-//     comment: { type: String, trim: true, default: "" },
-//     createdAt: { type: Date, default: Date.now },
-//   },
-//   { _id: false }
-// );
+
 
 const productSchema = new mongoose.Schema(
   {
@@ -41,11 +32,16 @@ const productSchema = new mongoose.Schema(
   lowercase: true,
 },
 
-    shortDescription: {
+  shortDescription: {
       type: String,
       trim: true,
       default: "",
     },
+ directionsOfUse: {
+  type: String,
+  trim: true,
+  default: "",
+},
 
     imageUrl: {
       type: String,
@@ -191,5 +187,6 @@ reviews: [
   },
   { timestamps: true }
 );
-
-module.exports = mongoose.model("Product", productSchema);
+//module.exports = mongoose.model("Product", productSchema);
+module.exports =
+  mongoose.models.Product || mongoose.model("Product", productSchema);

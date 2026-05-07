@@ -1,4 +1,4 @@
-
+const User = require("../models/user");
 const mongoose = require("mongoose");
 const groupMembershipSchema = new mongoose.Schema(
   {
@@ -100,7 +100,131 @@ router.get("/type/:groupType", async (req, res) => {
     });
   }
 });
+router.get("/:slug/people", async (req, res) => {
+  try {
+    const slug = req.params.slug.trim().toLowerCase();
+    const group = await Group.findOne({ slug, isActive: true });
 
+    if (!group) {
+      return res.status(404).json({ message: "Group not found" });
+    }
+
+    const key = (group.categoryKey || group.title || "").toLowerCase().trim();
+
+    const users = await User.find({
+      role: { $ne: "admin" },
+    }).select(
+      "fullName email profileImage onboarding.skinType onboarding.skinConcerns onboarding.skinPhototype onboarding.chronicCondition onboarding.specialConditions"
+    );
+
+    const matchedUsers = users.filter((user) => {
+      const onboarding = user.onboarding || {};
+
+     if (group.groupType === "medications") {
+  const chronicCondition = (onboarding.chronicCondition || "")
+    .toLowerCase()
+    .trim();
+
+  const specialConditions = onboarding.specialConditions || [];
+
+  return (
+    chronicCondition.includes(key) ||
+    specialConditions.some((condition) => {
+      return condition.toLowerCase().trim() === key;
+    })
+  );
+}
+      if (group.groupType === "skin_types") {
+        const concerns = onboarding.skinConcerns || [];
+
+        return concerns.some((concern) => {
+          return concern.toLowerCase().trim() === key;
+        });
+      }
+
+      if (group.groupType === "skin_tones") {
+        const userTone = (onboarding.skinPhototype || "")
+          .toLowerCase()
+          .trim();
+
+        return userTone === key;
+      }
+
+      const userSkinType = (onboarding.skinType || "").toLowerCase().trim();
+
+      return (
+        userSkinType === key ||
+        userSkinType === `${key} skin` ||
+        userSkinType.replace(" skin", "") === key
+      );
+    });
+
+    res.status(200).json(matchedUsers);
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to fetch group people",
+      error: error.message,
+    });
+  }
+});
+// router.get("/:slug/people", async (req, res) => {
+//   try {
+//     const slug = req.params.slug.trim().toLowerCase();
+
+//     const group = await Group.findOne({ slug, isActive: true });
+
+//     if (!group) {
+//       return res.status(404).json({ message: "Group not found" });
+//     }
+
+//     const key = (group.categoryKey || group.title || "")
+//       .toLowerCase()
+//       .trim();
+
+//     const users = await User.find({
+//       role: { $ne: "admin" },
+// }).select(
+//   "fullName email profileImage onboarding.skinType onboarding.skinConcerns onboarding.skinPhototype"
+// );
+//     const matchedUsers = users.filter((user) => {
+//   const onboarding = user.onboarding || {};
+
+//   if (group.groupType === "skin_types") {
+//     const concerns = onboarding.skinConcerns || [];
+
+//     return concerns.some((concern) => {
+//       const userConcern = concern.toLowerCase().trim();
+//       return userConcern === key;
+//     });
+//   }
+
+//   if (group.groupType === "skin_tones") {
+//     const userTone = (onboarding.skinPhototype || "")
+//       .toLowerCase()
+//       .trim();
+
+//     return userTone === key;
+//   }
+
+//   const userSkinType = (onboarding.skinType || "")
+//     .toLowerCase()
+//     .trim();
+
+//   return (
+//     userSkinType === key ||
+//     userSkinType === `${key} skin` ||
+//     userSkinType.replace(" skin", "") === key
+//   );
+// });
+
+//     res.status(200).json(matchedUsers);
+//   } catch (error) {
+//     res.status(500).json({
+//       message: "Failed to fetch group people",
+//       error: error.message,
+//     });
+//   }
+// });
 // Get single group by slug
 router.get("/:slug", async (req, res) => {
   try {

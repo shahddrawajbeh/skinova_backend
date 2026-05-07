@@ -34,6 +34,12 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/groups", groupRoutes);
 app.use("/api/group-posts", groupPostsRoutes);
 app.use("/uploads", express.static("uploads"));
+app.use("/api/ingredients", require("./routes/ingredientRoutes"));
+app.use("/api/medications", require("./routes/medicationRoutes"));
+const productScanRoutes = require("./routes/productScanRoutes");
+app.use("/api/product-scan", productScanRoutes);
+const productAnalyzeRoutes = require("./routes/productAnalyzeRoutes");
+app.use("/api/product-analyze", productAnalyzeRoutes);
 
 app.listen(5000, "0.0.0.0", () => {
   console.log("Server running on port 5000");
